@@ -14,12 +14,19 @@ contract BookStore is ERC1155 {
         address currency;
         address author;
     }
+    address private _owner;
 
-    constructor(address _storeFrontAddress)
-        ERC1155("https://example.com/api/{id}.json")
-    {
-        _storeFront = StoreFront(_storeFrontAddress);
+    constructor() ERC1155("https://example.com/api/{id}.json") {
         _currentBookVersionID = 1;
+        _owner = msg.sender;
+    }
+
+    function setStoreFront(address _storeFrontAddress) public {
+        require(
+            msg.sender == _owner,
+            "BookStore: Only contract owner can set storefront"
+        );
+        _storeFront = StoreFront(_storeFrontAddress);
     }
 
     function publish(
@@ -36,7 +43,11 @@ contract BookStore is ERC1155 {
         _currentBookVersionID++;
     }
 
-    function purchaseFromAuthor(address _buyer, uint256 _bookVersionID) public {
+    function transferFromAuthor(address _buyer, uint256 _bookVersionID) public {
+        require(
+            msg.sender == address(_storeFront),
+            "Message can only be called from storefront"
+        );
         BookVersion memory bookVersion = _bookVersions[_bookVersionID];
         safeTransferFrom(bookVersion.author, _buyer, _bookVersionID, 1, "");
     }
@@ -55,5 +66,13 @@ contract BookStore is ERC1155 {
         returns (address)
     {
         return _bookVersions[_bookVersionID].currency;
+    }
+
+    function bookVersionAuthor(uint256 _bookVersionID)
+        public
+        view
+        returns (address)
+    {
+        return _bookVersions[_bookVersionID].author;
     }
 }
